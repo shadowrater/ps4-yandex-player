@@ -16,7 +16,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         path: repo
-    
+
     - name: Install dependencies
       run: |
         wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo -S -p '' apt-key add -
@@ -36,26 +36,24 @@ jobs:
         tar -xzf sdk.tar.gz -C $HOME/orbis-sdk
         mv $HOME/orbis-sdk/OpenOrbis/PS4Toolchain/* $HOME/orbis-sdk/ 2>/dev/null || true
         rm -rf $HOME/orbis-sdk/OpenOrbis
-        ls -la $HOME/orbis-sdk/
+        ls $HOME/orbis-sdk/
 
     - name: Create toolchain wrappers
       run: |
         SDK=$HOME/orbis-sdk
         mkdir -p $SDK/bin/linux
-        
         printf '#!/bin/bash\nexec clang-18 -target x86_64-pc-freebsd-elf -mno-red-zone -fms-extensions -fno-exceptions -fno-rtti -ffreestanding -fPIC "$@"\n' > $SDK/bin/linux/orbis-clang
         chmod +x $SDK/bin/linux/orbis-clang
-        
         printf '#!/bin/bash\nexec llvm-strip-18 "$@"\n' > $SDK/bin/linux/orbis-strip
         chmod +x $SDK/bin/linux/orbis-strip
-        
         $SDK/bin/linux/orbis-clang --version
 
     - name: Build project
-      working-directory: repo/ps4-yandex-player
       run: |
         export OO_PS4_TOOLCHAIN=$HOME/orbis-sdk
         export PATH=$HOME/orbis-sdk/bin/linux:$PATH
+        cd repo/ps4-yandex-player
+        ls src/
         make info || true
         make clean || true
         make all 2>&1
