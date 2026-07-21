@@ -7,16 +7,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// PS4-specific
+// PS4-specific headers (OpenOrbis SDK format)
 #ifdef __ORBIS__
 #include <orbis/libkernel.h>
-#include <orbis/libSceNet.h>
-#include <orbis/libSceHttp.h>
-#include <orbis/libSceAudioOut.h>
-#include <orbis/libSceSysmodule.h>
-#include <orbis/libSceRtc.h>
-#include <orbis/libSceSystemService.h>
-#include <orbis/libSceAppMgr.h>
+#include <orbis/Net.h>
+#include <orbis/Http.h>
+#include <orbis/AudioOut.h>
+#include <orbis/Sysmodule.h>
+#include <orbis/Rtc.h>
+#include <orbis/SystemService.h>
+#include <orbis/Pad.h>
+#include <orbis/VideoOut.h>
 #endif
 
 // App constants

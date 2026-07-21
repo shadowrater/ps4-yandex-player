@@ -4,7 +4,7 @@
 
 // ═══════════════════════════════════════════════════════════════
 //  Audio Player - декодирование и воспроизведение
-//  Использует stb_vorbis для OGG Vorbis
+//  Использует stb_vorbis для OGG, minimp3 для MP3
 // ═══════════════════════════════════════════════════════════════
 
 // ─── Static state ──────────────────────────────────────────────
@@ -57,10 +57,9 @@ static void* audio_playback_thread(void *arg) {
         return NULL;
     }
 
-    // Устанавливаем громкость
-    sceAudioOutSetVolume(g_audio_port,
-        SCE_AUDIO_VOLUME_FLAG_L_CH | SCE_AUDIO_VOLUME_FLAG_R_CH,
-        &g_volume);
+    // Устанавливаем громкость (просто значение, без флагов)
+    int32_t vol = g_volume;
+    sceAudioOutSetVolume(g_audio_port, 3, &vol); // 3 = both channels
 
     while (g_thread_running && g_state == PLAYER_PLAYING) {
         // Декодируем сэмплы
@@ -110,19 +109,27 @@ static void* audio_playback_thread(void *arg) {
 
 YmpError audio_init(void) {
 #ifdef __ORBIS__
-    // Загружаем модуль аудио
-    int ret = sceSysmoduleLoadModule(SCE_SYSMODULE_AUDIO);
-    if (ret < 0) return YMP_ERR_AUDIO;
+    // Инициализируем аудио
+    int ret = sceAudioOutInit();
+    if (ret != 0) {
+        printf("[Audio] sceAudioOutInit failed: 0x%08X\n", (unsigned int)ret);
+        return YMP_ERR_AUDIO;
+    }
+
+    // Получаем ID пользователя
+    OrbisUserServiceUserId userId = 0; // ORBIS_USER_SERVICE_USER_ID_SYSTEM
 
     // Открываем аудио порт
-    g_audio_port = sceAudioOutOpenPort(
-        SCE_AUDIO_OUT_PORT_TYPE_MAIN,
+    g_audio_port = sceAudioOutOpen(
+        userId,
+        ORBIS_AUDIO_OUT_PORT_TYPE_MAIN,
+        0,                      // диффузия
         256,                    // 256 сэмплов на буфер
         AUDIO_SAMPLE_RATE,
-        SCE_AUDIO_OUT_PARAM_FORMAT_S16_STEREO
+        ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_STEREO
     );
 
-    if (g_audio_port < 0) {
+    if (g_audio_port <= 0) {
         printf("[Audio] Failed to open port: 0x%08X\n", (unsigned int)g_audio_port);
         return YMP_ERR_AUDIO;
     }
@@ -155,7 +162,7 @@ void audio_cleanup(void) {
     }
 
 #ifdef __ORBIS__
-    if (g_audio_port >= 0) {
+    if (g_audio_port > 0) {
         sceAudioOutClose(g_audio_port);
         g_audio_port = -1;
     }
@@ -166,7 +173,6 @@ YmpError audio_play(const char *url) {
     if (!url) return YMP_ERR_MEMORY;
 
     // Для URL нужно сначала скачать файл
-    // Пока заглушка — используем audio_play_file
     printf("[Audio] URL playback not yet implemented: %s\n", url);
     SAFE_STRCPY(g_current_url, url);
 
@@ -219,11 +225,9 @@ YmpError audio_pause(void) {
     if (g_state != PLAYER_PLAYING) return YMP_OK;
 
 #ifdef __ORBIS__
-    if (g_audio_port >= 0) {
-        int vol = 0;
-        sceAudioOutSetVolume(g_audio_port,
-            SCE_AUDIO_VOLUME_FLAG_L_CH | SCE_AUDIO_VOLUME_FLAG_R_CH,
-            &vol);
+    if (g_audio_port > 0) {
+        int32_t vol = 0;
+        sceAudioOutSetVolume(g_audio_port, 3, &vol); // 0 volume
     }
 #endif
 
@@ -235,10 +239,9 @@ YmpError audio_resume(void) {
     if (g_state != PLAYER_PAUSED) return YMP_OK;
 
 #ifdef __ORBIS__
-    if (g_audio_port >= 0) {
-        sceAudioOutSetVolume(g_audio_port,
-            SCE_AUDIO_VOLUME_FLAG_L_CH | SCE_AUDIO_VOLUME_FLAG_R_CH,
-            &g_volume);
+    if (g_audio_port > 0) {
+        int32_t vol = g_volume;
+        sceAudioOutSetVolume(g_audio_port, 3, &vol);
     }
 #endif
 
@@ -267,10 +270,9 @@ YmpError audio_set_volume(int volume) {
     g_volume = MAX(0, MIN(100, volume));
 
 #ifdef __ORBIS__
-    if (g_audio_port >= 0 && g_state == PLAYER_PLAYING) {
-        sceAudioOutSetVolume(g_audio_port,
-            SCE_AUDIO_VOLUME_FLAG_L_CH | SCE_AUDIO_VOLUME_FLAG_R_CH,
-            &g_volume);
+    if (g_audio_port > 0 && g_state == PLAYER_PLAYING) {
+        int32_t vol = g_volume;
+        sceAudioOutSetVolume(g_audio_port, 3, &vol);
     }
 #endif
 

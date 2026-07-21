@@ -7,8 +7,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 #ifdef __ORBIS__
-#include <orbis/libScePiglet.h>   // OpenGL ES для PS4
-#include <orbis/libSceVideoOut.h>
+#include <orbis/Pigletv2VSH.h>   // OpenGL ES для PS4
+#include <orbis/VideoOut.h>
 #endif
 
 // ─── projectM C API (из libprojectM) ──────────────────────────
@@ -45,7 +45,7 @@ static void projectm_pcm_add_int16(projectm_handle h, const short* s, int n, int
 // ─── Простой визуализатор (спектроанализатор без projectM) ────
 
 #ifdef __ORBIS__
-#include <orbis/libSceDisplay.h>
+#include <orbis/VideoOut.h>
 #endif
 
 #define SIMPLE_BARS 64

@@ -7,9 +7,9 @@
 // or direct framebuffer access for the UI.
 
 #ifdef __ORBIS__
-#include <orbis/libSceSysDiag.h>
-#include <orbis/libSceGpu.h>
-#include <orbis/libSceVideoOut.h>
+
+
+
 #endif
 
 // ─── Static state ──────────────────────────────────────────────
