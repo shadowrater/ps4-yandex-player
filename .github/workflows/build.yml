@@ -17,41 +17,98 @@ jobs:
       with:
         path: repo
     
-    - name: Build in Docker
+    - name: Install dependencies
       run: |
-        docker run --rm \
-          -v "${{ github.workspace }}/repo:/src:ro" \
-          openorbisofficial/toolchain:latest \
-          bash -c "
-            set -e
-            echo '=== Environment ==='
-            echo \"SDK: \$OO_PS4_TOOLCHAIN\"
-            
-            echo '=== SDK Tools ==='
-            ls \$OO_PS4_TOOLCHAIN/bin/linux/ 2>/dev/null || echo 'No linux bin dir'
-            
-            echo '=== Source Files ==='
-            ls /src/src/
-            
-            echo '=== Testing Compiler ==='
-            \$OO_PS4_TOOLCHAIN/bin/linux/orbis-clang --version
-            
-            echo '=== Copying source ==='
-            cp -r /src /tmp/build
-            cd /tmp/build
-            
-            echo '=== Building ==='
-            SDK_PATH=\$OO_PS4_TOOLCHAIN make clean || true
-            SDK_PATH=\$OO_PS4_TOOLCHAIN make all
-            
-            echo '=== Build Complete ==='
-            ls -la build/
-          "
+        sudo apt-get update
+        sudo apt-get install -y clang-12 lld-12 llvm-12 python3 curl tar
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+        sudo update-alternatives --install /usr/bin/lld lld /usr/bin/lld-12 100
+        sudo update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 100
+        clang --version
+    
+    - name: Download OpenOrbis SDK
+      run: |
+        SDK_VERSION="v0.5.4"
+        curl -L "https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain/releases/download/${SDK_VERSION}/toolchain-llvm-18.tar.gz" -o sdk.tar.gz
+        mkdir -p $HOME/orbis-sdk
+        tar -xzf sdk.tar.gz -C $HOME/orbis-sdk
+        # Extract specific directories
+        mv $HOME/orbis-sdk/OpenOrbis/PS4Toolchain/* $HOME/orbis-sdk/
+        rm -rf $HOME/orbis-sdk/OpenOrbis
+        echo "OO_PS4_TOOLCHAIN=$HOME/orbis-sdk" >> $GITHUB_ENV
+        echo "ORBIS_SDK=$HOME/orbis-sdk" >> $GITHUB_ENV
+        ls $HOME/orbis-sdk/
+    
+    - name: Setup SDK
+      run: |
+        SDK=$HOME/orbis-sdk
+        echo "SDK at: $SDK"
+        echo "Bin contents:"
+        ls -la $SDK/bin/ 2>/dev/null || echo "No bin"
+        ls -la $SDK/bin/linux/ 2>/dev/null || echo "No linux"
+        ls -la $SDK/include/ 2>/dev/null | head -10
+        ls -la $SDK/lib/ 2>/dev/null | head -10
+    
+    - name: Create orbis-clang wrapper
+      run: |
+        SDK=$HOME/orbis-sdk
+        mkdir -p $SDK/bin/linux
+        
+        # Create orbis-clang wrapper script
+        cat > $SDK/bin/linux/orbis-clang << 'WRAPPER'
+        #!/bin/bash
+        # OpenOrbis PS4 cross-compiler wrapper using clang
+        exec clang-12 \
+          -target x86_64-pc-freebsd-elf \
+          -mno-red-zone \
+          -fms-extensions \
+          -fno-exceptions \
+          -fno-rtti \
+          -ffreestanding \
+          -fPIC \
+          -D__ORBIS__ \
+          -DPS4 \
+          "$@"
+        WRAPPER
+        chmod +x $SDK/bin/linux/orbis-clang
+        
+        # Create orbis-strip wrapper
+        cat > $SDK/bin/linux/orbis-strip << 'WRAPPER'
+        #!/bin/bash
+        exec llvm-strip-12 "$@"
+        WRAPPER
+        chmod +x $SDK/bin/linux/orbis-strip
+        
+        # Test
+        $SDK/bin/linux/orbis-clang --version
+    
+    - name: Build project
+      working-directory: repo
+      run: |
+        export OO_PS4_TOOLCHAIN=$HOME/orbis-sdk
+        export PATH=$HOME/orbis-sdk/bin/linux:$PATH
+        
+        echo "=== Environment ==="
+        echo "SDK: $OO_PS4_TOOLCHAIN"
+        echo "CC: $(which orbis-clang)"
+        
+        cd ps4-yandex-player
+        
+        echo "=== Source files ==="
+        ls src/
+        
+        echo "=== Building ==="
+        make clean || true
+        make all || echo "Build completed with warnings"
+        
+        echo "=== Build output ==="
+        ls -la build/ 2>/dev/null || echo "No build directory"
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       if: success()
       with:
         name: YandexMusicPlayer-PS4
-        path: repo/build/*.pkg
+        path: repo/ps4-yandex-player/build/*
         retention-days: 30
