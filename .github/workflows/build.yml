@@ -14,8 +14,6 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      with:
-        path: repo
 
     - name: Install dependencies
       run: |
@@ -31,9 +29,9 @@ jobs:
     - name: Download OpenOrbis SDK
       run: |
         SDK_VERSION="v0.5.4"
-        curl -L "https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain/releases/download/${SDK_VERSION}/toolchain-llvm-18.tar.gz" -o sdk.tar.gz
+        curl -L "https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain/releases/download/${SDK_VERSION}/toolchain-llvm-18.tar.gz" -o /tmp/sdk.tar.gz
         mkdir -p $HOME/orbis-sdk
-        tar -xzf sdk.tar.gz -C $HOME/orbis-sdk
+        tar -xzf /tmp/sdk.tar.gz -C $HOME/orbis-sdk
         mv $HOME/orbis-sdk/OpenOrbis/PS4Toolchain/* $HOME/orbis-sdk/ 2>/dev/null || true
         rm -rf $HOME/orbis-sdk/OpenOrbis
         ls $HOME/orbis-sdk/
@@ -52,11 +50,13 @@ jobs:
       run: |
         export OO_PS4_TOOLCHAIN=$HOME/orbis-sdk
         export PATH=$HOME/orbis-sdk/bin/linux:$PATH
-        cd repo/ps4-yandex-player
+        echo "=== Source ==="
         ls src/
+        echo "=== Building ==="
         make info || true
         make clean || true
         make all 2>&1
+        echo "=== Result ==="
         ls -la build/ 2>/dev/null || echo "No build dir"
 
     - name: Upload artifact
@@ -64,5 +64,5 @@ jobs:
       if: always()
       with:
         name: YandexMusicPlayer-PS4
-        path: repo/ps4-yandex-player/build/
+        path: build/
         retention-days: 30
