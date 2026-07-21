@@ -14,47 +14,44 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        path: repo
     
-    - name: Test Docker image
-      run: |
-        docker run --rm openorbisofficial/toolchain:latest echo "Docker works"
-    
-    - name: Check SDK in Docker
-      run: |
-        docker run --rm openorbisofficial/toolchain:latest bash -c "
-          echo 'SDK Path: \$OO_PS4_TOOLCHAIN'
-          ls -la \$OO_PS4_TOOLCHAIN/
-          ls \$OO_PS4_TOOLCHAIN/bin/linux/ || echo 'No linux bin'
-        "
-    
-    - name: Copy source to Docker and build
+    - name: Build in Docker
       run: |
         docker run --rm \
-          -v "\${{ github.workspace }}:/workspace:ro" \
-          -w /tmp \
+          -v "${{ github.workspace }}/repo:/src:ro" \
           openorbisofficial/toolchain:latest \
           bash -c "
-            # Copy source
-            cp -r /workspace /tmp/build
+            set -e
+            echo '=== Environment ==='
+            echo \"SDK: \$OO_PS4_TOOLCHAIN\"
+            
+            echo '=== SDK Tools ==='
+            ls \$OO_PS4_TOOLCHAIN/bin/linux/ 2>/dev/null || echo 'No linux bin dir'
+            
+            echo '=== Source Files ==='
+            ls /src/src/
+            
+            echo '=== Testing Compiler ==='
+            \$OO_PS4_TOOLCHAIN/bin/linux/orbis-clang --version
+            
+            echo '=== Copying source ==='
+            cp -r /src /tmp/build
             cd /tmp/build
             
-            # Show SDK
-            echo '=== SDK ==='
-            echo \"SDK: \$OO_PS4_TOOLCHAIN\"
-            ls \$OO_PS4_TOOLCHAIN/bin/linux/ || echo 'No linux bin'
+            echo '=== Building ==='
+            SDK_PATH=\$OO_PS4_TOOLCHAIN make clean || true
+            SDK_PATH=\$OO_PS4_TOOLCHAIN make all
             
-            # Try to compile one file
-            echo '=== Testing compile ==='
-            \$OO_PS4_TOOLCHAIN/bin/linux/orbis-clang --version || echo 'orbis-clang not found'
-            
-            # List source files
-            echo '=== Source files ==='
-            ls -la src/
+            echo '=== Build Complete ==='
+            ls -la build/
           "
     
-    - name: Upload logs
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
-      if: always()
+      if: success()
       with:
-        name: build-logs
-        path: /tmp/build-logs/
+        name: YandexMusicPlayer-PS4
+        path: repo/build/*.pkg
+        retention-days: 30
