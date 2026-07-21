@@ -1,9 +1,12 @@
 # OpenOrbis PS4 Toolchain - Yandex Music Player
-# Requires: OpenOrbis SDK installed ($ORBIS_SDK)
+# Requires: OpenOrbis SDK installed ($OO_PS4_TOOLCHAIN or $ORBIS_SDK)
+
+# SDK path (Docker uses OO_PS4_TOOLCHAIN, local uses ORBIS_SDK)
+SDK_PATH := $(or $(OO_PS4_TOOLCHAIN),$(ORBIS_SDK),/lib/OpenOrbisSDK)
 
 # Toolchain
-CC := $(ORBIS_SDK)/host_tools/bin/orbis-clang
-STRIP := $(ORBIS_SDK)/host_tools/bin/orbis-strip
+CC := $(SDK_PATH)/bin/linux/orbis-clang
+STRIP := $(SDK_PATH)/bin/linux/orbis-strip
 
 # Project
 TITLE := Yandex Music Player
@@ -14,7 +17,7 @@ APP_VER := 01.00
 SRC_DIR := src
 INC_DIR := include
 BUILD_DIR := build
-STB_DIR := $(ORBIS_SDK)/include/stb
+STB_DIR := $(SDK_PATH)/include/stb
 
 # Sources
 SOURCES := $(wildcard $(SRC_DIR)/*.c)
@@ -26,14 +29,15 @@ JSON_OBJ := $(BUILD_DIR)/cjson.o
 
 # Flags
 CFLAGS := -Wall -Wextra -O2 -g
-CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/orbis -I$(STB_DIR)
+CFLAGS += -I$(INC_DIR) -I$(SDK_PATH)/include -I$(STB_DIR)
 CFLAGS += -D__ORBIS__ -DPS4
 
 # Uncomment to enable projectM (Milkdrop) visualizer:
 # CFLAGS += -DUSE_PROJECTM
 
 # Libraries
-LDFLAGS := -lSceLibc -lSceNet -lSceSysmodule -lSceAudioOut -lSceHttp
+LDFLAGS := -L$(SDK_PATH)/lib
+LDFLAGS += -lSceLibc -lSceNet -lSceSysmodule -lSceAudioOut -lSceHttp
 LDFLAGS += -lSceIpmi -lSceRtc -lSceSystemService -lSceAppMgr
 LDFLAGS += -lScePfs -lSceAppDb
 
@@ -59,13 +63,8 @@ $(JSON_OBJ): $(JSON_SRC)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile sources (decoder.c включает stb_vorbis.c через #include)
+# Compile sources
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Special rule for decoder.c (includes stb_vorbis.c)
-$(BUILD_DIR)/decoder.o: $(SRC_DIR)/decoder.c $(STB_DIR)/stb_vorbis.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
