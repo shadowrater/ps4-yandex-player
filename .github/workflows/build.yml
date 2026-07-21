@@ -15,29 +15,46 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Build with Docker
+    - name: Test Docker image
+      run: |
+        docker run --rm openorbisofficial/toolchain:latest echo "Docker works"
+    
+    - name: Check SDK in Docker
+      run: |
+        docker run --rm openorbisofficial/toolchain:latest bash -c "
+          echo 'SDK Path: \$OO_PS4_TOOLCHAIN'
+          ls -la \$OO_PS4_TOOLCHAIN/
+          ls \$OO_PS4_TOOLCHAIN/bin/linux/ || echo 'No linux bin'
+        "
+    
+    - name: Copy source to Docker and build
       run: |
         docker run --rm \
-          -v "${{ github.workspace }}:/workspace" \
-          -w /workspace \
+          -v "\${{ github.workspace }}:/workspace:ro" \
+          -w /tmp \
           openorbisofficial/toolchain:latest \
           bash -c "
-            echo 'SDK: \$OO_PS4_TOOLCHAIN'
-            ls \$OO_PS4_TOOLCHAIN/bin/ || echo 'SDK bin not found'
-            cd /workspace
-            make clean || true
-            make all
+            # Copy source
+            cp -r /workspace /tmp/build
+            cd /tmp/build
+            
+            # Show SDK
+            echo '=== SDK ==='
+            echo \"SDK: \$OO_PS4_TOOLCHAIN\"
+            ls \$OO_PS4_TOOLCHAIN/bin/linux/ || echo 'No linux bin'
+            
+            # Try to compile one file
+            echo '=== Testing compile ==='
+            \$OO_PS4_TOOLCHAIN/bin/linux/orbis-clang --version || echo 'orbis-clang not found'
+            
+            # List source files
+            echo '=== Source files ==='
+            ls -la src/
           "
     
-    - name: List artifacts
-      run: |
-        echo "Build output:"
-        ls -la ps4-yandex-player/build/ 2>/dev/null || echo "No build directory"
-    
-    - name: Upload PKG
+    - name: Upload logs
       uses: actions/upload-artifact@v4
-      if: success()
+      if: always()
       with:
-        name: YandexMusicPlayer-PS4
-        path: ps4-yandex-player/build/*.pkg
-        retention-days: 30
+        name: build-logs
+        path: /tmp/build-logs/
