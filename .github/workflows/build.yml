@@ -11,29 +11,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    container:
-      image: openorbisofficial/toolchain:latest
-    
     steps:
     - name: Checkout
       uses: actions/checkout@v4
     
-    - name: Verify SDK
-      run: |
-        echo "SDK Path: $OO_PS4_TOOLCHAIN"
-        which orbis-clang || echo "orbis-clang not in PATH"
-        ls $OO_PS4_TOOLCHAIN/bin/ 2>/dev/null || echo "SDK bin not found"
+    - name: Build in Docker
+      uses: addnab/docker-run-action@v3
+      with:
+        image: openorbisofficial/toolchain:latest
+        options: -v ${{ github.workspace }}:/build
+        run: |
+          cd /build
+          echo "SDK: $OO_PS4_TOOLCHAIN"
+          ls $OO_PS4_TOOLCHAIN/bin/ || echo "SDK bin not found"
+          make clean
+          make all
     
-    - name: Build project
-      working-directory: ps4-yandex-player
-      run: |
-        make clean
-        make all
-    
-    - name: List build artifacts
-      if: success()
-      run: |
-        ls -la ps4-yandex-player/build/
+    - name: List artifacts
+      run: ls -la ps4-yandex-player/build/
     
     - name: Upload PKG
       uses: actions/upload-artifact@v4
@@ -41,12 +36,4 @@ jobs:
       with:
         name: YandexMusicPlayer-PS4
         path: ps4-yandex-player/build/*.pkg
-        retention-days: 30
-    
-    - name: Upload ELF
-      uses: actions/upload-artifact@v4
-      if: success()
-      with:
-        name: YandexMusicPlayer-PS4-ELF
-        path: ps4-yandex-player/build/*.elf
         retention-days: 30
