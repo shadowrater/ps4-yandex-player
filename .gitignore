@@ -1,0 +1,23 @@
+# Build outputs
+build/
+*.pkg
+*.elf
+*.o
+*.so
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+
+# Orbis SDK
+$ORBIS_SDK/
