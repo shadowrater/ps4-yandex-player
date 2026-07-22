@@ -7,7 +7,7 @@
 
 // ─── stb_vorbis (OGG Vorbis) ──────────────────────────────────
 #define STB_VORBIS_IMPLEMENTATION
-#include "stb_vorbis.c"
+#include "stb/stb_vorbis.c"
 
 // ─── minimp3 (MP3) - fix get_bits conflict ────────────────────
 #define get_bits minimp3_get_bits
