@@ -4,15 +4,9 @@
 # SDK path
 SDK_PATH := $(or $(OO_PS4_TOOLCHAIN),$(ORBIS_SDK),$(HOME)/orbis-sdk)
 
-# Toolchain - use wrapper scripts or system clang
-CC := $(SDK_PATH)/bin/linux/orbis-clang
-STRIP := $(SDK_PATH)/bin/linux/orbis-strip
-
-# Fallback to system clang if wrappers don't exist
-ifeq ($(wildcard $(CC)),)
-  CC := clang
-  STRIP := llvm-strip
-endif
+# Toolchain
+CC := clang
+STRIP := llvm-strip
 
 # Project
 TITLE := Yandex Music Player
@@ -44,42 +38,30 @@ CFLAGS += -fno-rtti
 CFLAGS += -ffreestanding
 CFLAGS += -D__ORBIS__ -DPS4
 
-# Uncomment to enable projectM (Milkdrop) visualizer:
-# CFLAGS += -DUSE_PROJECTM
-
-# Libraries
+# Libraries (PS4 stubs)
 LDFLAGS := -L$(SDK_PATH)/lib
 LDFLAGS += -lSceLibc -lSceNet -lSceSysmodule -lSceAudioOut -lSceHttp
 LDFLAGS += -lSceIpmi -lSceRtc -lSceSystemService -lSceAppMgr
-LDFLAGS += -lScePfs -lSceAppDb
 
-# OpenGL ES (piglet) для визуализатора (закомментировано пока нет lib)
-# LDFLAGS += -lScePiglet -lSceDisplay -lGLESv2 -lEGL
-
-# Linker flags
+# Linker
 LDFLAGS += -fuse-ld=lld
-LDFLAGS += --eh-frame-hdr
 LDFLAGS += --no-dynamic-linker
 
-.PHONY: all clean create_sfo package
+.PHONY: all clean create_sfo info
 
 all: $(BUILD_DIR)/$(TITLEID).elf
 
-# Create param.sfo
 create_sfo:
 	python3 tools/create_sfo.py $(TITLEID) "$(TITLE)" $(APP_VER) $(BUILD_DIR)/sce_sys/param.sfo
 
-# Compile CJSON
 $(JSON_OBJ): $(JSON_SRC)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile sources
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Link
 $(BUILD_DIR)/$(TITLEID).elf: $(OBJECTS) $(JSON_OBJ)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
@@ -88,7 +70,6 @@ $(BUILD_DIR)/$(TITLEID).elf: $(OBJECTS) $(JSON_OBJ)
 clean:
 	rm -rf $(BUILD_DIR)
 
-# Info
 info:
 	@echo "SDK: $(SDK_PATH)"
 	@echo "CC: $(CC)"

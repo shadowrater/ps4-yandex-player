@@ -7,6 +7,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 #ifdef __ORBIS__
+#ifdef USE_PROJECTM
 #include <orbis/Pigletv2VSH.h>   // OpenGL ES для PS4
 #include <orbis/VideoOut.h>
 #endif
